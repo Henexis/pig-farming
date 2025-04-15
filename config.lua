@@ -10,7 +10,7 @@ Config.NPCName = "Ông Năm"
 Config.NPCModel = "a_m_m_farmer_01"
 Config.SellNPCName = "Bác Sáu"
 Config.SellNPCModel = "s_m_m_cntrybar_01"
- 
+
 -- Pig Farming Settings
 Config.GrowthTime = 10 -- Thời gian lợn phát triển (phút)
 Config.FeedTime = 2 -- Thời gian lợn đói (phút)
