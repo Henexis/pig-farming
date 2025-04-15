@@ -1,29 +1,25 @@
 fx_version 'cerulean'
 game 'gta5'
 
+description 'Pig Farming Script for QBCore'
 author 'T5.Prime'
-description 'Pig Farming Job for QBCore'
 version '1.0.0'
-
-shared_scripts {
-    '@qb-core/shared/locale.lua',
-    'config.lua'
-}
-
-client_scripts {
-    'client/main.lua'
-}
-
-server_scripts {
-    'server/main.lua'
-}
 
 ui_page 'html/index.html'
 
+shared_script 'config.lua'
+client_scripts {
+    'client/main.lua',
+}
+server_scripts {
+    '@oxmysql/lib/MySQL.lua',
+    'server/main.lua'
+}
+
 files {
     'html/index.html',
-    'html/app.js',
-    'html/style.css'
+    'html/style.css',
+    'html/app.js'
 }
 
 lua54 'yes'
