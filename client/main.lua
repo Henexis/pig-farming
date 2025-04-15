@@ -12,6 +12,7 @@ local uiActive = false
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
     PlayerData = QBCore.Functions.GetPlayerData()
     LoadFarm()
+    Wait(1000)  -- Đợi để đảm bảo server đã sẵn sàng
     FetchPigs()
 end)
 
@@ -50,24 +51,28 @@ function LoadFarm()
     EndTextCommandSetBlipName(sellBlip)
 
     -- Tạo NPC
-    RequestModel(GetHashKey(Config.NPCModel))
-    while not HasModelLoaded(GetHashKey(Config.NPCModel)) do
-        Wait(1)
+    if not DoesEntityExist(npcPed) then
+        RequestModel(GetHashKey(Config.NPCModel))
+        while not HasModelLoaded(GetHashKey(Config.NPCModel)) do
+            Wait(1)
+        end
+        npcPed = CreatePed(4, GetHashKey(Config.NPCModel), Config.NPCLocation.x, Config.NPCLocation.y, Config.NPCLocation.z - 1.0, Config.NPCLocation.w, false, true)
+        FreezeEntityPosition(npcPed, true)
+        SetEntityInvincible(npcPed, true)
+        SetBlockingOfNonTemporaryEvents(npcPed, true)
     end
-    npcPed = CreatePed(4, GetHashKey(Config.NPCModel), Config.NPCLocation.x, Config.NPCLocation.y, Config.NPCLocation.z - 1, Config.NPCLocation.w, false, true)
-    FreezeEntityPosition(npcPed, true)
-    SetEntityInvincible(npcPed, true)
-    SetBlockingOfNonTemporaryEvents(npcPed, true)
     
     -- Tạo NPC bán lợn
-    RequestModel(GetHashKey(Config.SellNPCModel))
-    while not HasModelLoaded(GetHashKey(Config.SellNPCModel)) do
-        Wait(1)
+    if not DoesEntityExist(sellNpcPed) then
+        RequestModel(GetHashKey(Config.SellNPCModel))
+        while not HasModelLoaded(GetHashKey(Config.SellNPCModel)) do
+            Wait(1)
+        end
+        sellNpcPed = CreatePed(4, GetHashKey(Config.SellNPCModel), Config.SellLocation.x, Config.SellLocation.y, Config.SellLocation.z - 1.0, Config.SellLocation.w, false, true)
+        FreezeEntityPosition(sellNpcPed, true)
+        SetEntityInvincible(sellNpcPed, true)
+        SetBlockingOfNonTemporaryEvents(sellNpcPed, true)
     end
-    sellNpcPed = CreatePed(4, GetHashKey(Config.SellNPCModel), Config.SellLocation.x, Config.SellLocation.y, Config.SellLocation.z - 1, Config.SellLocation.w, false, true)
-    FreezeEntityPosition(sellNpcPed, true)
-    SetEntityInvincible(sellNpcPed, true)
-    SetBlockingOfNonTemporaryEvents(sellNpcPed, true)
 end
 
 function RemoveBlips()
@@ -82,11 +87,11 @@ function RemoveBlips()
 end
 
 function DeletePeds()
-    if npcPed then
+    if DoesEntityExist(npcPed) then
         DeletePed(npcPed)
         npcPed = nil
     end
-    if sellNpcPed then
+    if DoesEntityExist(sellNpcPed) then
         DeletePed(sellNpcPed)
         sellNpcPed = nil
     end
@@ -94,7 +99,9 @@ end
 
 function FetchPigs()
     QBCore.Functions.TriggerCallback('pig-farming:server:GetPigs', function(pigData)
-        pigs = pigData
+        if pigData then
+            pigs = pigData
+        end
     end)
 end
 
@@ -153,6 +160,8 @@ function OpenPigPenMenu()
     end
 
     FetchPigs()
+    Wait(250)  -- Đợi để đảm bảo dữ liệu đã được lấy
+    
     local pigPenMenu = {
         {
             header = "Chuồng Lợn",
@@ -192,7 +201,7 @@ end
 
 function OpenSellMenu()
     QBCore.Functions.TriggerCallback('pig-farming:server:GetHarvestedPigs', function(harvestedPigs)
-        if #harvestedPigs == 0 then
+        if not harvestedPigs or #harvestedPigs == 0 then
             QBCore.Functions.Notify("Bạn không có lợn nào để bán.", "error")
             return
         end
@@ -205,7 +214,7 @@ function OpenSellMenu()
         }
         
         for i, pig in ipairs(harvestedPigs) do
-            local total = pig.weight * Config.PricePerKg
+            local total = math.floor(pig.weight * Config.PricePerKg)
             
             sellMenu[#sellMenu+1] = {
                 header = "Lợn #" .. pig.id .. " - " .. pig.weight .. "kg",
@@ -257,6 +266,7 @@ end)
 
 RegisterNetEvent('pig-farming:client:ViewMyPigs', function()
     FetchPigs()
+    Wait(250)  -- Đợi để đảm bảo dữ liệu đã được lấy
     
     if #pigs == 0 then
         QBCore.Functions.Notify("Bạn chưa có lợn nào.", "error")
@@ -379,7 +389,7 @@ RegisterNetEvent('pig-farming:client:PigOptions', function(data)
                 }
             }
         }
-    }
+    end
     
     pigOptionsMenu[#pigOptionsMenu+1] = {
         header = "Quay lại",
@@ -580,3 +590,4 @@ AddEventHandler('onResourceStart', function(resourceName)
         FetchPigs()
     end
 end)
+
