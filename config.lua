@@ -1,62 +1,48 @@
 Config = {}
 
--- Vị trí NPC
-Config.NPCLocation = vector4(2388.51, 5044.25, 45.99, 270.39)
-Config.NPCModel = "a_m_m_farmer_01"
+-- Locations
+Config.NPCLocation = vector4(2388.52, 5044.39, 45.99, 174.25) -- Vị trí NPC chính
+Config.PigPenLocation = vector3(2385.39, 5047.23, 46.40) -- Vị trí chuồng lợn
+Config.SellLocation = vector4(972.12, -2111.56, 31.39, 82.56) -- Vị trí bán lợn
+
+-- NPC Info
 Config.NPCName = "Ông Năm"
+Config.NPCModel = "a_m_m_farmer_01"
+Config.SellNPCName = "Bác Sáu"
+Config.SellNPCModel = "s_m_m_cntrybar_01"
 
--- Vị trí chuồng lợn
-Config.PigPenLocation = vector3(2382.85, 5047.25, 45.34)
-Config.PigPenRadius = 20.0
+-- Pig Farming Settings
+Config.GrowthTime = 10 -- Thời gian lợn phát triển (phút)
+Config.FeedTime = 2 -- Thời gian lợn đói (phút)
+Config.WaterTime = 3 -- Thời gian lợn khát (phút)
+Config.CleanTime = 5 -- Thời gian lợn bẩn (phút)
 
--- Vị trí bán lợn
-Config.SellLocation = vector4(2343.91, 5007.34, 42.08, 129.17)
-Config.SellNPCModel = "a_m_m_farmer_01"
-Config.SellNPCName = "Chú Bảy"
-
--- Thời gian nuôi lợn (phút)
-Config.GrowthTime = 10  -- thời gian để lợn lớn
-
--- Chu kỳ chăm sóc (phút)
-Config.FeedTime = 2     -- chu kỳ cho ăn
-Config.WaterTime = 3    -- chu kỳ cho uống
-Config.CleanTime = 5    -- chu kỳ tắm rửa
-
--- Phần thưởng
-Config.Rewards = {
-    Money = {
-        Min = 1000,
-        Max = 5000
-    },
-    PorkMeat = {
-        Item = "pork_meat",
-        Min = 1,
-        Max = 5
-    }
-}
-
--- Giá mỗi kg lợn
-Config.PricePerKg = 100
-
--- Trọng lượng lợn (kg)
+-- Pig Weight Range
 Config.PigWeight = {
     Min = 80,
-    Max = 120
+    Max = 150
 }
 
--- Vật phẩm cần thiết
-Config.Items = {
-    Feed = "pig_feed",
-    Water = "water_bucket",
-    Soap = "pig_soap"
-}
-
--- Chi phí tự động chăm sóc (tiền)
+-- Prices
+Config.PricePerKg = 12 -- Giá tiền mỗi kg lợn
 Config.AutoCarePrice = {
-    Feed = 200,
-    Water = 100,
-    Clean = 300
+    Feed = 50,
+    Water = 30,
+    Clean = 40
 }
 
--- Thời gian hiển thị DrawText (ms)
-Config.DrawTextDuration = 5000
+-- Items
+Config.Items = {
+    Feed = "pig_feed",  -- Thức ăn lợn
+    Water = "water_bucket", -- Xô nước
+    Soap = "pig_soap"   -- Xà phòng tắm lợn
+}
+
+-- Rewards
+Config.Rewards = {
+    PorkMeat = {
+        Item = "pork_meat",
+        Min = 5,
+        Max = 15
+    }
+}
