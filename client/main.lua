@@ -4,7 +4,6 @@ local pigs = {}
 local isInFarm = false
 local farmBlip = nil
 local sellBlip = nil
-local pigPenZone = nil
 local npcPed = nil
 local sellNpcPed = nil
 local uiActive = false
@@ -36,7 +35,7 @@ function LoadFarm()
     SetBlipAsShortRange(farmBlip, true)
     SetBlipColour(farmBlip, 5)
     BeginTextCommandSetBlipName("STRING")
-    AddTextComponentSubstring("Trang Trại Lợn")
+    AddTextComponentString("Trang Trại Lợn")
     EndTextCommandSetBlipName(farmBlip)
 
     -- Tạo Blip cho điểm bán
@@ -47,7 +46,7 @@ function LoadFarm()
     SetBlipAsShortRange(sellBlip, true)
     SetBlipColour(sellBlip, 2)
     BeginTextCommandSetBlipName("STRING")
-    AddTextComponentSubstring("Bán Lợn")
+    AddTextComponentString("Bán Lợn")
     EndTextCommandSetBlipName(sellBlip)
 
     -- Tạo NPC
@@ -69,47 +68,6 @@ function LoadFarm()
     FreezeEntityPosition(sellNpcPed, true)
     SetEntityInvincible(sellNpcPed, true)
     SetBlockingOfNonTemporaryEvents(sellNpcPed, true)
-
-    -- Thiết lập qb-target
-    exports['qb-target']:AddTargetEntity(npcPed, {
-        options = {
-            {
-                type = "client",
-                event = "pig-farming:client:OpenFarmMenu",
-                icon = "fas fa-piggy-bank",
-                label = "Nói chuyện với " .. Config.NPCName,
-            }
-        },
-        distance = 2.0
-    })
-
-    exports['qb-target']:AddTargetEntity(sellNpcPed, {
-        options = {
-            {
-                type = "client",
-                event = "pig-farming:client:OpenSellMenu",
-                icon = "fas fa-money-bill",
-                label = "Bán lợn với " .. Config.SellNPCName,
-            }
-        },
-        distance = 2.0
-    })
-
-    -- Tạo vùng chuồng lợn
-    exports['qb-target']:AddCircleZone("pigpen", Config.PigPenLocation, Config.PigPenRadius, {
-        name = "pigpen",
-        debugPoly = false,
-    }, {
-        options = {
-            {
-                type = "client",
-                event = "pig-farming:client:InteractWithPigPen",
-                icon = "fas fa-piggy-bank",
-                label = "Quản lý chuồng lợn",
-            }
-        },
-        distance = 3.0
-    })
 end
 
 function RemoveBlips()
@@ -140,7 +98,24 @@ function FetchPigs()
     end)
 end
 
-RegisterNetEvent('pig-farming:client:OpenFarmMenu', function()
+-- DrawText3D function
+function DrawText3D(x, y, z, text)
+    SetTextScale(0.35, 0.35)
+    SetTextFont(4)
+    SetTextProportional(1)
+    SetTextColour(255, 255, 255, 215)
+    SetTextEntry("STRING")
+    SetTextCentre(true)
+    AddTextComponentString(text)
+    SetDrawOrigin(x, y, z, 0)
+    DrawText(0.0, 0.0)
+    local factor = (string.len(text)) / 370
+    DrawRect(0.0, 0.0+0.0125, 0.017+ factor, 0.03, 0, 0, 0, 75)
+    ClearDrawOrigin()
+end
+
+-- Menu functions
+function OpenFarmMenu()
     local farmMenu = {
         {
             header = "Trang Trại Lợn - " .. Config.NPCName,
@@ -169,24 +144,9 @@ RegisterNetEvent('pig-farming:client:OpenFarmMenu', function()
         }
     }
     exports['qb-menu']:openMenu(farmMenu)
-end)
+end
 
-RegisterNetEvent('pig-farming:client:StartFarming', function()
-    QBCore.Functions.TriggerCallback('pig-farming:server:CanStartFarming', function(canStart)
-        if canStart then
-            isInFarm = true
-            QBCore.Functions.Notify("Bạn đã bắt đầu công việc nuôi lợn. Hãy đến chuồng lợn để bắt đầu.", "success")
-        else
-            QBCore.Functions.Notify("Bạn không thể bắt đầu công việc nuôi lợn lúc này.", "error")
-        end
-    end)
-end)
-
-RegisterNetEvent('pig-farming:client:ShowFarmInfo', function()
-    QBCore.Functions.Notify("Nuôi lợn: Cho lợn ăn, uống nước và tắm cho chúng. Lợn sẽ lớn lên sau " .. Config.GrowthTime .. " phút và bạn có thể bán chúng.", "primary", 10000)
-end)
-
-RegisterNetEvent('pig-farming:client:InteractWithPigPen', function()
+function OpenPigPenMenu()
     if not isInFarm then
         QBCore.Functions.Notify("Bạn cần nói chuyện với " .. Config.NPCName .. " để bắt đầu công việc.", "error")
         return
@@ -228,17 +188,71 @@ RegisterNetEvent('pig-farming:client:InteractWithPigPen', function()
         }
     }
     exports['qb-menu']:openMenu(pigPenMenu)
-end)
+end
 
-RegisterNetEvent('pig-farming:client:BuyPig', function()
-    QBCore.Functions.TriggerCallback('pig-farming:server:BuyPig', function(success)
-        if success then
-            QBCore.Functions.Notify("Bạn đã mua một con lợn giống.", "success")
-            FetchPigs()
+function OpenSellMenu()
+    QBCore.Functions.TriggerCallback('pig-farming:server:GetHarvestedPigs', function(harvestedPigs)
+        if #harvestedPigs == 0 then
+            QBCore.Functions.Notify("Bạn không có lợn nào để bán.", "error")
+            return
+        end
+        
+        local sellMenu = {
+            {
+                header = "Bán Lợn - " .. Config.SellNPCName,
+                isMenuHeader = true
+            },
+        }
+        
+        for i, pig in ipairs(harvestedPigs) do
+            local total = pig.weight * Config.PricePerKg
+            
+            sellMenu[#sellMenu+1] = {
+                header = "Lợn #" .. pig.id .. " - " .. pig.weight .. "kg",
+                txt = "Giá bán: $" .. total,
+                params = {
+                    event = "pig-farming:client:SellPig",
+                    args = {
+                        pigId = pig.id
+                    }
+                }
+            }
+        end
+        
+        sellMenu[#sellMenu+1] = {
+            header = "Bán tất cả",
+            txt = "Bán tất cả lợn đã thu hoạch",
+            params = {
+                event = "pig-farming:client:SellAllPigs"
+            }
+        }
+        
+        sellMenu[#sellMenu+1] = {
+            header = "Đóng",
+            txt = "",
+            params = {
+                event = ""
+            }
+        }
+        
+        exports['qb-menu']:openMenu(sellMenu)
+    end)
+end
+
+-- Event handlers
+RegisterNetEvent('pig-farming:client:StartFarming', function()
+    QBCore.Functions.TriggerCallback('pig-farming:server:CanStartFarming', function(canStart)
+        if canStart then
+            isInFarm = true
+            QBCore.Functions.Notify("Bạn đã bắt đầu công việc nuôi lợn. Hãy đến chuồng lợn để bắt đầu.", "success")
         else
-            QBCore.Functions.Notify("Bạn không thể mua thêm lợn giống. Kiểm tra tiền hoặc số lượng lợn hiện tại.", "error")
+            QBCore.Functions.Notify("Bạn không thể bắt đầu công việc nuôi lợn lúc này.", "error")
         end
     end)
+end)
+
+RegisterNetEvent('pig-farming:client:ShowFarmInfo', function()
+    QBCore.Functions.Notify("Nuôi lợn: Cho lợn ăn, uống nước và tắm cho chúng. Lợn sẽ lớn lên sau " .. Config.GrowthTime .. " phút và bạn có thể bán chúng.", "primary", 10000)
 end)
 
 RegisterNetEvent('pig-farming:client:ViewMyPigs', function()
@@ -365,7 +379,7 @@ RegisterNetEvent('pig-farming:client:PigOptions', function(data)
                 }
             }
         }
-    end
+    }
     
     pigOptionsMenu[#pigOptionsMenu+1] = {
         header = "Quay lại",
@@ -376,6 +390,17 @@ RegisterNetEvent('pig-farming:client:PigOptions', function(data)
     }
     
     exports['qb-menu']:openMenu(pigOptionsMenu)
+end)
+
+RegisterNetEvent('pig-farming:client:BuyPig', function()
+    QBCore.Functions.TriggerCallback('pig-farming:server:BuyPig', function(success)
+        if success then
+            QBCore.Functions.Notify("Bạn đã mua một lợn giống. Hãy chăm sóc nó tốt nhé!", "success")
+            FetchPigs()
+        else
+            QBCore.Functions.Notify("Bạn không thể mua thêm lợn. Kiểm tra lại số tiền hoặc số lượng lợn hiện tại.", "error")
+        end
+    end)
 end)
 
 RegisterNetEvent('pig-farming:client:FeedPig', function(data)
@@ -430,52 +455,7 @@ RegisterNetEvent('pig-farming:client:HarvestPig', function(data)
 end)
 
 RegisterNetEvent('pig-farming:client:OpenSellMenu', function()
-    QBCore.Functions.TriggerCallback('pig-farming:server:GetHarvestedPigs', function(harvestedPigs)
-        if #harvestedPigs == 0 then
-            QBCore.Functions.Notify("Bạn không có lợn nào để bán.", "error")
-            return
-        end
-        
-        local sellMenu = {
-            {
-                header = "Bán Lợn - " .. Config.SellNPCName,
-                isMenuHeader = true
-            },
-        }
-        
-        for i, pig in ipairs(harvestedPigs) do
-            local total = pig.weight * Config.PricePerKg
-            
-            sellMenu[#sellMenu+1] = {
-                header = "Lợn #" .. pig.id .. " - " .. pig.weight .. "kg",
-                txt = "Giá bán: $" .. total,
-                params = {
-                    event = "pig-farming:client:SellPig",
-                    args = {
-                        pigId = pig.id
-                    }
-                }
-            }
-        end
-        
-        sellMenu[#sellMenu+1] = {
-            header = "Bán tất cả",
-            txt = "Bán tất cả lợn đã thu hoạch",
-            params = {
-                event = "pig-farming:client:SellAllPigs"
-            }
-        }
-        
-        sellMenu[#sellMenu+1] = {
-            header = "Đóng",
-            txt = "",
-            params = {
-                event = ""
-            }
-        }
-        
-        exports['qb-menu']:openMenu(sellMenu)
-    end)
+    OpenSellMenu()
 end)
 
 RegisterNetEvent('pig-farming:client:SellPig', function(data)
@@ -523,6 +503,47 @@ end)
 RegisterNUICallback('closeDashboard', function()
     uiActive = false
     SetNuiFocus(false, false)
+end)
+
+-- Vòng lặp chính cho sự kiện tương tác
+CreateThread(function()
+    while true do
+        local sleep = 1000
+        local playerPed = PlayerPedId()
+        local pos = GetEntityCoords(playerPed)
+        
+        -- Tương tác với NPC chính
+        local npcDist = #(pos - vector3(Config.NPCLocation.x, Config.NPCLocation.y, Config.NPCLocation.z))
+        if npcDist < 5.0 then
+            sleep = 0
+            DrawText3D(Config.NPCLocation.x, Config.NPCLocation.y, Config.NPCLocation.z + 1.0, "[E] Nói chuyện với " .. Config.NPCName)
+            if npcDist < 2.0 and IsControlJustPressed(0, 38) then -- E key
+                OpenFarmMenu()
+            end
+        end
+        
+        -- Tương tác với chuồng lợn
+        local penDist = #(pos - vector3(Config.PigPenLocation.x, Config.PigPenLocation.y, Config.PigPenLocation.z))
+        if penDist < 5.0 then
+            sleep = 0
+            DrawText3D(Config.PigPenLocation.x, Config.PigPenLocation.y, Config.PigPenLocation.z + 1.0, "[E] Tương tác với chuồng lợn")
+            if penDist < 2.0 and IsControlJustPressed(0, 38) then -- E key
+                OpenPigPenMenu()
+            end
+        end
+        
+        -- Tương tác với NPC bán lợn
+        local sellDist = #(pos - vector3(Config.SellLocation.x, Config.SellLocation.y, Config.SellLocation.z))
+        if sellDist < 5.0 then
+            sleep = 0
+            DrawText3D(Config.SellLocation.x, Config.SellLocation.y, Config.SellLocation.z + 1.0, "[E] Nói chuyện với " .. Config.SellNPCName)
+            if sellDist < 2.0 and IsControlJustPressed(0, 38) then -- E key
+                OpenSellMenu()
+            end
+        end
+        
+        Wait(sleep)
+    end
 end)
 
 -- Update thông tin lợn liên tục khi UI đang mở
